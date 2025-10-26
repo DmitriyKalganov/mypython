@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BookOpen, Sparkles, Plus, Trash2, RotateCw, ArrowLeftRight } from 'lucide-react';
+import { API_ENDPOINTS } from './config';
 
 const FlashcardApp = () => {
   const [cards, setCards] = useState([]);
@@ -36,7 +37,8 @@ const FlashcardApp = () => {
       const fromLangName = fromLang === 'ru' ? 'русский' : 'английский';
       const toLangName = toLang === 'ru' ? 'русский' : 'английский';
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      // Отправляем запрос на наш backend (API ключ там!)
+      const response = await fetch(API_ENDPOINTS.generate, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -93,7 +95,8 @@ const FlashcardApp = () => {
       const fromLangName = fromLang === 'ru' ? 'русского' : 'английского';
       const toLangName = toLang === 'ru' ? 'русский' : 'английский';
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      // Отправляем запрос на наш backend (API ключ там!)
+      const response = await fetch(API_ENDPOINTS.translate, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
