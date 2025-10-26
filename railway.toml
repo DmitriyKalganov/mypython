@@ -1,0 +1,8 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cd flashcards-app/backend && pip install -r requirements.txt"
+
+[deploy]
+startCommand = "cd flashcards-app/backend && gunicorn app:app --bind 0.0.0.0:$PORT"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
