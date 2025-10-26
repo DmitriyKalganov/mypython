@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["python39", "pip"]
+
+[phases.install]
+cmds = ["cd flashcards-app/backend && pip install -r requirements.txt"]
+
+[start]
+cmd = "cd flashcards-app/backend && gunicorn app:app --bind 0.0.0.0:${PORT:-5000}"
