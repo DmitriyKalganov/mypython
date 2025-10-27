@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Офферы - Affiliate Bridge</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">Affiliate Bridge</a>
+            <ul class="navbar-nav">
+                <li><a href="/">Главная</a></li>
+                <li><a href="/offers">Офферы</a></li>
+                <li><a href="/dashboard" id="dashboardLink">Кабинет</a></li>
+                <li><a href="/login" id="loginLink" class="btn btn-primary">Войти</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container" style="padding: 3rem 0;">
+        <h1 class="mb-4">Доступные офферы</h1>
+
+        <!-- Фильтры -->
+        <div style="background: white; padding: 1.5rem; border-radius: 1rem; box-shadow: var(--shadow); margin-bottom: 2rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                <div>
+                    <label class="form-label">Поиск</label>
+                    <input type="text" class="form-input" id="searchInput" placeholder="Название оффера...">
+                </div>
+                <div>
+                    <label class="form-label">Категория</label>
+                    <select class="form-select" id="categoryFilter">
+                        <option value="">Все категории</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Сортировка</label>
+                    <select class="form-select" id="sortFilter">
+                        <option value="newest">Сначала новые</option>
+                        <option value="price_high">Цена: по убыванию</option>
+                        <option value="price_low">Цена: по возрастанию</option>
+                        <option value="commission">Комиссия: по убыванию</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Список офферов -->
+        <div class="offers-grid" id="offersContainer">
+            <p>Загрузка офферов...</p>
+        </div>
+    </div>
+
+    <script>
+        let allOffers = [];
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        // Настройка навигации
+        if (token && user.id) {
+            document.getElementById('dashboardLink').style.display = 'block';
+            document.getElementById('loginLink').style.display = 'none';
+        } else {
+            document.getElementById('dashboardLink').style.display = 'none';
+        }
+
+        // Загрузка офферов
+        async function loadOffers() {
+            try {
+                const response = await fetch('/api/offers');
+                allOffers = await response.json();
+
+                // Получение уникальных категорий
+                const categories = [...new Set(allOffers.map(o => o.category).filter(Boolean))];
+                const categoryFilter = document.getElementById('categoryFilter');
+                categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    categoryFilter.appendChild(option);
+                });
+
+                displayOffers(allOffers);
+            } catch (error) {
+                console.error('Ошибка загрузки офферов:', error);
+                document.getElementById('offersContainer').innerHTML =
+                    '<p class="text-center">Ошибка загрузки офферов</p>';
+            }
+        }
+
+        function displayOffers(offers) {
+            const container = document.getElementById('offersContainer');
+
+            if (offers.length === 0) {
+                container.innerHTML = '<p class="text-center">Офферы не найдены</p>';
+                return;
+            }
+
+            container.innerHTML = offers.map(offer => `
+                <div class="offer-card">
+                    <div class="offer-image"></div>
+                    <div class="offer-content">
+                        <div class="offer-title">${offer.title}</div>
+                        <p class="offer-description">${offer.description || 'Описание отсутствует'}</p>
+                        ${offer.category ? `<p style="color: var(--text-secondary); font-size: 0.875rem;">📁 ${offer.category}</p>` : ''}
+                        <div class="offer-details">
+                            <div class="offer-price">${formatPrice(offer.price)} сум</div>
+                            <div class="offer-commission">+${offer.commission_percent}%</div>
+                        </div>
+                        <p style="color: var(--success-color); font-weight: 600; margin-bottom: 1rem;">
+                            Ваш заработок: ${formatPrice(offer.partner_commission)} сум
+                        </p>
+                        ${user.user_type === 'partner' ?
+                            `<button class="btn btn-primary" style="width: 100%;" onclick="getAffiliateLink(${offer.id})">
+                                Получить ссылку
+                            </button>` :
+                            `<a href="/register?type=partner" class="btn btn-primary" style="width: 100%;">
+                                Стать партнёром
+                            </a>`
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Получение партнёрской ссылки
+        async function getAffiliateLink(offerId) {
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/affiliate-links', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ offer_id: offerId })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    const link = result.link.tracking_url;
+                    alert(`Ваша партнёрская ссылка:\n\n${link}\n\nСсылка скопирована в буфер обмена!`);
+                    navigator.clipboard.writeText(link);
+                } else {
+                    alert(result.error || 'Ошибка создания ссылки');
+                }
+            } catch (error) {
+                alert('Ошибка соединения с сервером');
+            }
+        }
+
+        // Фильтрация и поиск
+        document.getElementById('searchInput').addEventListener('input', filterOffers);
+        document.getElementById('categoryFilter').addEventListener('change', filterOffers);
+        document.getElementById('sortFilter').addEventListener('change', filterOffers);
+
+        function filterOffers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            const sortBy = document.getElementById('sortFilter').value;
+
+            let filtered = allOffers.filter(offer => {
+                const matchesSearch = offer.title.toLowerCase().includes(searchTerm) ||
+                                    (offer.description && offer.description.toLowerCase().includes(searchTerm));
+                const matchesCategory = !category || offer.category === category;
+
+                return matchesSearch && matchesCategory;
+            });
+
+            // Сортировка
+            switch (sortBy) {
+                case 'price_high':
+                    filtered.sort((a, b) => b.price - a.price);
+                    break;
+                case 'price_low':
+                    filtered.sort((a, b) => a.price - b.price);
+                    break;
+                case 'commission':
+                    filtered.sort((a, b) => b.commission_percent - a.commission_percent);
+                    break;
+                default: // newest
+                    filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            }
+
+            displayOffers(filtered);
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('ru-RU').format(price);
+        }
+
+        loadOffers();
+    </script>
+</body>
+</html>
