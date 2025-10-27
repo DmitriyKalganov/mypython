@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация - Affiliate Bridge</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">Affiliate Bridge</a>
+            <ul class="navbar-nav">
+                <li><a href="/">Главная</a></li>
+                <li><a href="/offers">Офферы</a></li>
+                <li><a href="/login">Войти</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 600px; margin-top: 4rem; margin-bottom: 4rem;">
+        <div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: var(--shadow);">
+            <h1 class="text-center mb-4">Регистрация</h1>
+
+            <div id="errorAlert" class="alert alert-error" style="display: none;"></div>
+            <div id="successAlert" class="alert alert-success" style="display: none;"></div>
+
+            <form id="registerForm">
+                <div class="form-group">
+                    <label class="form-label">Тип аккаунта *</label>
+                    <select class="form-select" name="user_type" id="userType" required>
+                        <option value="">Выберите тип</option>
+                        <option value="partner">Партнёр (зарабатывать на продажах)</option>
+                        <option value="company">Компания (размещать офферы)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" class="form-input" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Пароль *</label>
+                    <input type="password" class="form-input" name="password" minlength="6" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ФИО *</label>
+                    <input type="text" class="form-input" name="full_name" required>
+                </div>
+
+                <div class="form-group" id="companyNameGroup" style="display: none;">
+                    <label class="form-label">Название компании *</label>
+                    <input type="text" class="form-input" name="company_name">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Телефон</label>
+                    <input type="tel" class="form-input" name="phone" placeholder="+998 90 123-45-67">
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Зарегистрироваться</button>
+            </form>
+
+            <p class="text-center mt-3">
+                Уже есть аккаунт? <a href="/login" style="color: var(--primary-color);">Войти</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Показать/скрыть поле названия компании
+        document.getElementById('userType').addEventListener('change', (e) => {
+            const companyNameGroup = document.getElementById('companyNameGroup');
+            if (e.target.value === 'company') {
+                companyNameGroup.style.display = 'block';
+                document.querySelector('[name="company_name"]').required = true;
+            } else {
+                companyNameGroup.style.display = 'none';
+                document.querySelector('[name="company_name"]').required = false;
+            }
+        });
+
+        // Предзаполнение типа из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const typeParam = urlParams.get('type');
+        if (typeParam) {
+            document.getElementById('userType').value = typeParam;
+            document.getElementById('userType').dispatchEvent(new Event('change'));
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = {
+                email: formData.get('email'),
+                password: formData.get('password'),
+                user_type: formData.get('user_type'),
+                full_name: formData.get('full_name'),
+                company_name: formData.get('company_name'),
+                phone: formData.get('phone')
+            };
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showSuccess('Регистрация прошла успешно! Перенаправление...');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 1500);
+                } else {
+                    showError(result.error || 'Ошибка регистрации');
+                }
+            } catch (error) {
+                showError('Ошибка соединения с сервером');
+            }
+        });
+
+        function showError(message) {
+            const alert = document.getElementById('errorAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            document.getElementById('successAlert').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            const alert = document.getElementById('successAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            document.getElementById('errorAlert').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

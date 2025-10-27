@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет - Affiliate Bridge</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">Affiliate Bridge</a>
+            <ul class="navbar-nav">
+                <li><a href="/dashboard">Кабинет</a></li>
+                <li><a href="/offers">Офферы</a></li>
+                <li><a href="#" id="userName">Загрузка...</a></li>
+                <li><a href="#" id="logoutBtn" class="btn btn-primary">Выйти</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container dashboard">
+        <h1 class="mb-4">Личный кабинет</h1>
+
+        <!-- Статистика -->
+        <div class="stats-grid" id="statsContainer">
+            <p>Загрузка статистики...</p>
+        </div>
+
+        <!-- Контент для партнёров -->
+        <div id="partnerContent" style="display: none;">
+            <div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: var(--shadow); margin-bottom: 2rem;">
+                <h2 class="mb-3">Мои партнёрские ссылки</h2>
+                <div id="affiliateLinks">
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+
+            <div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: var(--shadow);">
+                <h2 class="mb-3">Последние конверсии</h2>
+                <div id="recentConversions">
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Контент для компаний -->
+        <div id="companyContent" style="display: none;">
+            <div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: var(--shadow); margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2>Мои офферы</h2>
+                    <button class="btn btn-primary" id="createOfferBtn">Создать оффер</button>
+                </div>
+                <div id="companyOffers">
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+
+            <div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: var(--shadow);">
+                <h2 class="mb-3">Последние конверсии</h2>
+                <div id="companyConversions">
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно создания оффера -->
+    <div id="createOfferModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Создать новый оффер</h2>
+                <span class="modal-close">&times;</span>
+            </div>
+            <form id="createOfferForm">
+                <div class="form-group">
+                    <label class="form-label">Название *</label>
+                    <input type="text" class="form-input" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Описание</label>
+                    <textarea class="form-textarea" name="description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Цена (сум) *</label>
+                    <input type="number" class="form-input" name="price" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Комиссия партнёра (%) *</label>
+                    <input type="number" class="form-input" name="commission_percent" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Категория</label>
+                    <input type="text" class="form-input" name="category">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">URL товара</label>
+                    <input type="url" class="form-input" name="product_url">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Создать</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Проверка авторизации
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        if (!token || !user.id) {
+            window.location.href = '/login';
+        }
+
+        // Отображение имени пользователя
+        document.getElementById('userName').textContent = user.full_name || user.email;
+
+        // Выход
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        });
+
+        // Загрузка статистики
+        async function loadStats() {
+            try {
+                const endpoint = user.user_type === 'partner' ? '/api/stats/partner' : '/api/stats/company';
+                const response = await fetch(endpoint, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const stats = await response.json();
+
+                if (user.user_type === 'partner') {
+                    document.getElementById('partnerContent').style.display = 'block';
+                    displayPartnerStats(stats);
+                    loadAffiliateLinks();
+                } else {
+                    document.getElementById('companyContent').style.display = 'block';
+                    displayCompanyStats(stats);
+                    loadCompanyOffers();
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки статистики:', error);
+            }
+        }
+
+        function displayPartnerStats(stats) {
+            const container = document.getElementById('statsContainer');
+            container.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Кликов</div>
+                    <div class="stat-value">${stats.total_clicks || 0}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Конверсий</div>
+                    <div class="stat-value">${stats.total_conversions || 0}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Конверсия</div>
+                    <div class="stat-value">${stats.conversion_rate || 0}%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Заработано</div>
+                    <div class="stat-value">${formatPrice(stats.total_earnings || 0)} сум</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Баланс</div>
+                    <div class="stat-value">${formatPrice(stats.balance || 0)} сум</div>
+                </div>
+            `;
+        }
+
+        function displayCompanyStats(stats) {
+            const container = document.getElementById('statsContainer');
+            container.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Офферов</div>
+                    <div class="stat-value">${stats.total_offers || 0}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Кликов</div>
+                    <div class="stat-value">${stats.total_clicks || 0}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Продаж</div>
+                    <div class="stat-value">${stats.total_conversions || 0}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Оборот</div>
+                    <div class="stat-value">${formatPrice(stats.total_sales || 0)} сум</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Партнёров</div>
+                    <div class="stat-value">${stats.unique_partners || 0}</div>
+                </div>
+            `;
+        }
+
+        async function loadAffiliateLinks() {
+            try {
+                const response = await fetch('/api/affiliate-links', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const links = await response.json();
+                const container = document.getElementById('affiliateLinks');
+
+                if (links.length === 0) {
+                    container.innerHTML = '<p>У вас пока нет партнёрских ссылок. <a href="/offers">Выберите оффер</a></p>';
+                    return;
+                }
+
+                container.innerHTML = links.map(link => `
+                    <div style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+                        <strong>Оффер ID: ${link.offer_id}</strong><br>
+                        <input type="text" value="${link.tracking_url}" readonly
+                               style="width: 100%; margin-top: 0.5rem; padding: 0.5rem; border-radius: 0.25rem; border: 1px solid var(--border-color);"
+                               onclick="this.select()">
+                        <button class="btn btn-primary mt-2" onclick="copyToClipboard('${link.tracking_url}')">
+                            Копировать ссылку
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Ошибка загрузки ссылок:', error);
+            }
+        }
+
+        async function loadCompanyOffers() {
+            try {
+                const response = await fetch('/api/offers', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const allOffers = await response.json();
+                const myOffers = allOffers.filter(o => o.company_id === user.id);
+
+                const container = document.getElementById('companyOffers');
+
+                if (myOffers.length === 0) {
+                    container.innerHTML = '<p>У вас пока нет офферов</p>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Цена</th>
+                                <th>Комиссия</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${myOffers.map(offer => `
+                                <tr>
+                                    <td>${offer.title}</td>
+                                    <td>${formatPrice(offer.price)} сум</td>
+                                    <td>${offer.commission_percent}%</td>
+                                    <td>
+                                        <span class="badge ${offer.is_active ? 'badge-success' : 'badge-danger'}">
+                                            ${offer.is_active ? 'Активен' : 'Неактивен'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Ошибка загрузки офферов:', error);
+            }
+        }
+
+        // Модальное окно создания оффера
+        const modal = document.getElementById('createOfferModal');
+        const createOfferBtn = document.getElementById('createOfferBtn');
+        const closeBtn = document.querySelector('.modal-close');
+
+        if (createOfferBtn) {
+            createOfferBtn.addEventListener('click', () => {
+                modal.classList.add('active');
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.classList.remove('active');
+            });
+        }
+
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+
+        document.getElementById('createOfferForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                price: parseFloat(formData.get('price')),
+                commission_percent: parseFloat(formData.get('commission_percent')),
+                category: formData.get('category'),
+                product_url: formData.get('product_url')
+            };
+
+            try {
+                const response = await fetch('/api/offers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    alert('Оффер создан успешно!');
+                    modal.classList.remove('active');
+                    e.target.reset();
+                    loadCompanyOffers();
+                    loadStats();
+                } else {
+                    const result = await response.json();
+                    alert(result.error || 'Ошибка создания оффера');
+                }
+            } catch (error) {
+                alert('Ошибка соединения с сервером');
+            }
+        });
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Ссылка скопирована!');
+            });
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('ru-RU').format(price);
+        }
+
+        // Загрузка данных
+        loadStats();
+    </script>
+</body>
+</html>

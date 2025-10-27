@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Affiliate Bridge - Универсальная партнёрская платформа</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">Affiliate Bridge</a>
+            <ul class="navbar-nav">
+                <li><a href="/">Главная</a></li>
+                <li><a href="/offers">Офферы</a></li>
+                <li><a href="/login">Войти</a></li>
+                <li><a href="/register" class="btn btn-primary">Регистрация</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero секция -->
+    <section class="hero">
+        <div class="container">
+            <h1>Универсальная партнёрская платформа</h1>
+            <p>Связываем компании и партнёров для взаимовыгодного сотрудничества</p>
+            <div class="hero-buttons">
+                <a href="/register?type=partner" class="btn" style="background: white; color: var(--primary-color);">Стать партнёром</a>
+                <a href="/register?type=company" class="btn btn-outline">Разместить оффер</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Особенности -->
+    <section class="features">
+        <div class="container">
+            <h2>Почему выбирают нас?</h2>
+            <div class="features-grid">
+                <!-- Для компаний -->
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">🏢</div>
+                    <h3>Для компаний</h3>
+                    <p><strong>Продажи без затрат на рекламу</strong></p>
+                    <ul style="color: var(--text-secondary); margin-top: 1rem;">
+                        <li>✓ Оплата только за результат</li>
+                        <li>✓ Расширение каналов продвижения</li>
+                        <li>✓ Массовое привлечение партнёров</li>
+                        <li>✓ Прозрачная статистика</li>
+                    </ul>
+                </div>
+
+                <!-- Для партнёров -->
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">💰</div>
+                    <h3>Для партнёров</h3>
+                    <p><strong>Дополнительный заработок</strong></p>
+                    <ul style="color: var(--text-secondary); margin-top: 1rem;">
+                        <li>✓ Минимальный порог входа</li>
+                        <li>✓ Множество офферов на выбор</li>
+                        <li>✓ Прозрачные выплаты</li>
+                        <li>✓ Детальная аналитика</li>
+                    </ul>
+                </div>
+
+                <!-- Как это работает -->
+                <div class="feature-card fade-in">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Как это работает</h3>
+                    <p><strong>Простой процесс</strong></p>
+                    <ul style="color: var(--text-secondary); margin-top: 1rem;">
+                        <li>1. Регистрация в системе</li>
+                        <li>2. Выбор оффера</li>
+                        <li>3. Получение уникальной ссылки</li>
+                        <li>4. Продвижение и заработок</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Статистика -->
+    <section style="background: white; padding: 4rem 0;">
+        <div class="container">
+            <h2 class="text-center mb-4">Наши результаты</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Компаний</div>
+                    <div class="stat-value">100+</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Партнёров</div>
+                    <div class="stat-value">1000+</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Офферов</div>
+                    <div class="stat-value">500+</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Выплачено</div>
+                    <div class="stat-value">100M+ сум</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Примеры офферов -->
+    <section class="features">
+        <div class="container">
+            <h2>Популярные офферы</h2>
+            <div class="offers-grid" id="popularOffers">
+                <p class="text-center">Загрузка офферов...</p>
+            </div>
+            <div class="text-center mt-4">
+                <a href="/offers" class="btn btn-primary">Смотреть все офферы</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Призыв к действию -->
+    <section class="hero">
+        <div class="container">
+            <h2>Готовы начать зарабатывать?</h2>
+            <p>Присоединяйтесь к нашей платформе прямо сейчас!</p>
+            <div class="hero-buttons">
+                <a href="/register" class="btn" style="background: white; color: var(--primary-color);">Зарегистрироваться</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Футер -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div>
+                    <h3>Affiliate Bridge</h3>
+                    <p style="color: rgba(255, 255, 255, 0.8);">
+                        Универсальная партнёрская платформа для взаимовыгодного сотрудничества
+                    </p>
+                </div>
+                <div>
+                    <h3>Компания</h3>
+                    <ul>
+                        <li><a href="#">О нас</a></li>
+                        <li><a href="#">Контакты</a></li>
+                        <li><a href="#">Блог</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Поддержка</h3>
+                    <ul>
+                        <li><a href="#">FAQ</a></li>
+                        <li><a href="#">Документация</a></li>
+                        <li><a href="#">Условия использования</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Контакты</h3>
+                    <ul>
+                        <li>Email: info@affiliatebridge.uz</li>
+                        <li>Телефон: +998 90 123-45-67</li>
+                        <li>Ташкент, Узбекистан</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="text-center mt-4" style="border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 2rem;">
+                <p style="color: rgba(255, 255, 255, 0.6);">
+                    &copy; 2024 Affiliate Bridge. Все права защищены.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Загрузка популярных офферов
+        async function loadPopularOffers() {
+            try {
+                const response = await fetch('/api/offers');
+                const offers = await response.json();
+
+                const container = document.getElementById('popularOffers');
+
+                if (offers.length === 0) {
+                    container.innerHTML = '<p class="text-center">Пока нет доступных офферов</p>';
+                    return;
+                }
+
+                container.innerHTML = offers.slice(0, 3).map(offer => `
+                    <div class="offer-card">
+                        <div class="offer-image"></div>
+                        <div class="offer-content">
+                            <div class="offer-title">${offer.title}</div>
+                            <p class="offer-description">${offer.description || 'Описание отсутствует'}</p>
+                            <div class="offer-details">
+                                <div class="offer-price">${formatPrice(offer.price)} сум</div>
+                                <div class="offer-commission">+${offer.commission_percent}%</div>
+                            </div>
+                            <a href="/login" class="btn btn-primary" style="width: 100%;">Получить ссылку</a>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Ошибка загрузки офферов:', error);
+                document.getElementById('popularOffers').innerHTML =
+                    '<p class="text-center">Ошибка загрузки офферов</p>';
+            }
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('ru-RU').format(price);
+        }
+
+        loadPopularOffers();
+    </script>
+</body>
+</html>
