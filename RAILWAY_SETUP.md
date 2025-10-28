@@ -4,13 +4,13 @@
 
 ### Файлы конфигурации:
 
+- ✅ `Dockerfile` - Docker образ (основной способ деплоя)
 - ✅ `app.py` - Flask приложение (entry point)
-- ✅ `Procfile` - команда запуска
-- ✅ `railway.toml` - конфигурация Railway
-- ✅ `nixpacks.toml` - конфигурация Nixpacks
+- ✅ `railway.toml` - конфигурация Railway (использует Docker)
 - ✅ `requirements.txt` - Python зависимости
+- ✅ `.dockerignore` - исключения для Docker
+- ✅ `Procfile` - резервная команда запуска
 - ✅ `.python-version` - Python 3.11
-- ✅ `start.sh` - скрипт запуска (альтернативный)
 
 ---
 
