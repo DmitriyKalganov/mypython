@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'affiliate_platform'))
 
 from affiliate_platform.backend.app import app, db
-from affiliate_platform.backend.models import User, Offer
+from affiliate_platform.backend.models import User, Offer, PasswordReset
 
 def init_database():
     """Инициализировать базу данных"""

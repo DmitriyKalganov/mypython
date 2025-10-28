@@ -228,3 +228,35 @@ class Payout(db.Model):
             'requested_at': self.requested_at.isoformat(),
             'completed_at': self.completed_at.isoformat() if self.completed_at else None
         }
+
+
+class PasswordReset(db.Model):
+    """Модель для восстановления пароля"""
+    __tablename__ = 'password_resets'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    reset_token = db.Column(db.String(100), unique=True, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @staticmethod
+    def generate_reset_token(length=32):
+        """Генерировать уникальный токен для сброса пароля"""
+        return secrets.token_urlsafe(length)
+
+    def is_expired(self):
+        """Проверить, истёк ли токен"""
+        return datetime.utcnow() > self.expires_at
+
+    def to_dict(self):
+        """Преобразовать в словарь"""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'reset_token': self.reset_token,
+            'expires_at': self.expires_at.isoformat(),
+            'used': self.used,
+            'created_at': self.created_at.isoformat()
+        }

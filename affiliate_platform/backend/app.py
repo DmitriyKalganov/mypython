@@ -8,7 +8,7 @@ import jwt
 import os
 from functools import wraps
 
-from .models import db, User, Offer, AffiliateLink, Click, Conversion, Payout
+from .models import db, User, Offer, AffiliateLink, Click, Conversion, Payout, PasswordReset
 
 app = Flask(__name__,
             template_folder='../frontend/templates',
@@ -84,6 +84,18 @@ def offers_page():
     return render_template('offers.html')
 
 
+@app.route('/forgot-password')
+def forgot_password_page():
+    """Страница запроса восстановления пароля"""
+    return render_template('forgot-password.html')
+
+
+@app.route('/reset-password')
+def reset_password_page():
+    """Страница сброса пароля"""
+    return render_template('reset-password.html')
+
+
 # =======================
 # API: Аутентификация
 # =======================
@@ -143,6 +155,104 @@ def login():
         'token': token,
         'user': user.to_dict()
     })
+
+
+@app.route('/api/password-reset/request', methods=['POST'])
+def request_password_reset():
+    """Запросить восстановление пароля"""
+    data = request.get_json()
+
+    if 'email' not in data:
+        return jsonify({'error': 'Email обязателен'}), 400
+
+    user = User.query.filter_by(email=data['email']).first()
+
+    if not user:
+        # Не раскрываем, существует ли пользователь (безопасность)
+        return jsonify({'message': 'Если email существует, на него отправлена инструкция'}), 200
+
+    # Деактивация старых токенов для этого пользователя
+    old_tokens = PasswordReset.query.filter_by(user_id=user.id, used=False).all()
+    for token in old_tokens:
+        token.used = True
+
+    # Создание нового токена
+    reset_token = PasswordReset.generate_reset_token()
+    password_reset = PasswordReset(
+        user_id=user.id,
+        reset_token=reset_token,
+        expires_at=datetime.utcnow() + timedelta(hours=24)  # Действителен 24 часа
+    )
+
+    db.session.add(password_reset)
+    db.session.commit()
+
+    # TODO: Отправить email с ссылкой для восстановления
+    # В реальном приложении здесь должна быть отправка email
+    # Для MVP можем просто вернуть токен в ответе (небезопасно для продакшна!)
+
+    reset_url = f"{request.host_url.rstrip('/')}/reset-password?token={reset_token}"
+
+    # В продакшне вместо этого отправлялся бы email
+    return jsonify({
+        'message': 'Инструкция для восстановления пароля отправлена на email',
+        'reset_url': reset_url  # Только для MVP! Удалить в продакшне
+    }), 200
+
+
+@app.route('/api/password-reset/verify/<token>', methods=['GET'])
+def verify_reset_token(token):
+    """Проверить токен восстановления пароля"""
+    password_reset = PasswordReset.query.filter_by(reset_token=token).first()
+
+    if not password_reset:
+        return jsonify({'error': 'Неверный токен'}), 400
+
+    if password_reset.used:
+        return jsonify({'error': 'Токен уже использован'}), 400
+
+    if password_reset.is_expired():
+        return jsonify({'error': 'Токен истёк'}), 400
+
+    return jsonify({
+        'message': 'Токен действителен',
+        'user_email': User.query.get(password_reset.user_id).email
+    }), 200
+
+
+@app.route('/api/password-reset/confirm', methods=['POST'])
+def confirm_password_reset():
+    """Подтвердить восстановление пароля с новым паролем"""
+    data = request.get_json()
+
+    if not all(k in data for k in ('token', 'new_password')):
+        return jsonify({'error': 'Токен и новый пароль обязательны'}), 400
+
+    password_reset = PasswordReset.query.filter_by(reset_token=data['token']).first()
+
+    if not password_reset:
+        return jsonify({'error': 'Неверный токен'}), 400
+
+    if password_reset.used:
+        return jsonify({'error': 'Токен уже использован'}), 400
+
+    if password_reset.is_expired():
+        return jsonify({'error': 'Токен истёк'}), 400
+
+    # Проверка длины пароля
+    if len(data['new_password']) < 6:
+        return jsonify({'error': 'Пароль должен быть не менее 6 символов'}), 400
+
+    # Обновление пароля пользователя
+    user = User.query.get(password_reset.user_id)
+    user.set_password(data['new_password'])
+
+    # Отметка токена как использованного
+    password_reset.used = True
+
+    db.session.commit()
+
+    return jsonify({'message': 'Пароль успешно изменён'}), 200
 
 
 # =======================
