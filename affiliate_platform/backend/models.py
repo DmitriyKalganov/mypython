@@ -119,6 +119,13 @@ class AffiliateLink(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
 
+    # UTM параметры для отслеживания источников трафика
+    utm_source = db.Column(db.String(100))  # Источник (facebook, instagram, telegram)
+    utm_medium = db.Column(db.String(100))  # Канал (social, email, cpc)
+    utm_campaign = db.Column(db.String(200))  # Название кампании
+    utm_content = db.Column(db.String(200))  # Содержимое/вариант объявления
+    utm_term = db.Column(db.String(200))  # Ключевое слово
+
     # Связи
     clicks = db.relationship('Click', backref='affiliate_link', lazy=True)
     conversions = db.relationship('Conversion', backref='affiliate_link', lazy=True)
@@ -129,13 +136,31 @@ class AffiliateLink(db.Model):
         characters = string.ascii_letters + string.digits
         return ''.join(secrets.choice(characters) for _ in range(length))
 
-    def get_tracking_url(self, base_url):
-        """Получить полную ссылку для отслеживания"""
-        return f"{base_url}/track/{self.tracking_code}"
+    def get_tracking_url(self, base_url, include_utm=True):
+        """Получить полную ссылку для отслеживания с UTM параметрами"""
+        url = f"{base_url}/track/{self.tracking_code}"
+
+        if include_utm:
+            utm_params = []
+            if self.utm_source:
+                utm_params.append(f"utm_source={self.utm_source}")
+            if self.utm_medium:
+                utm_params.append(f"utm_medium={self.utm_medium}")
+            if self.utm_campaign:
+                utm_params.append(f"utm_campaign={self.utm_campaign}")
+            if self.utm_content:
+                utm_params.append(f"utm_content={self.utm_content}")
+            if self.utm_term:
+                utm_params.append(f"utm_term={self.utm_term}")
+
+            if utm_params:
+                url += "?" + "&".join(utm_params)
+
+        return url
 
     def to_dict(self, base_url=None):
         """Преобразовать в словарь"""
-        return {
+        result = {
             'id': self.id,
             'partner_id': self.partner_id,
             'offer_id': self.offer_id,
@@ -144,6 +169,20 @@ class AffiliateLink(db.Model):
             'created_at': self.created_at.isoformat(),
             'is_active': self.is_active
         }
+
+        # Добавить UTM параметры если они есть
+        if self.utm_source:
+            result['utm_source'] = self.utm_source
+        if self.utm_medium:
+            result['utm_medium'] = self.utm_medium
+        if self.utm_campaign:
+            result['utm_campaign'] = self.utm_campaign
+        if self.utm_content:
+            result['utm_content'] = self.utm_content
+        if self.utm_term:
+            result['utm_term'] = self.utm_term
+
+        return result
 
 
 class Click(db.Model):
@@ -159,9 +198,16 @@ class Click(db.Model):
     referrer = db.Column(db.String(500))
     clicked_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # UTM параметры из ссылки для аналитики
+    utm_source = db.Column(db.String(100))
+    utm_medium = db.Column(db.String(100))
+    utm_campaign = db.Column(db.String(200))
+    utm_content = db.Column(db.String(200))
+    utm_term = db.Column(db.String(200))
+
     def to_dict(self):
         """Преобразовать в словарь"""
-        return {
+        result = {
             'id': self.id,
             'affiliate_link_id': self.affiliate_link_id,
             'partner_id': self.partner_id,
@@ -169,6 +215,20 @@ class Click(db.Model):
             'ip_address': self.ip_address,
             'clicked_at': self.clicked_at.isoformat()
         }
+
+        # Добавить UTM параметры если они есть
+        if self.utm_source:
+            result['utm_source'] = self.utm_source
+        if self.utm_medium:
+            result['utm_medium'] = self.utm_medium
+        if self.utm_campaign:
+            result['utm_campaign'] = self.utm_campaign
+        if self.utm_content:
+            result['utm_content'] = self.utm_content
+        if self.utm_term:
+            result['utm_term'] = self.utm_term
+
+        return result
 
 
 class Conversion(db.Model):
