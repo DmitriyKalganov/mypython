@@ -92,10 +92,23 @@ def send_password_reset_email(user_email, reset_token):
     )
 
     try:
+        # Устанавливаем timeout для отправки (5 секунд)
+        import socket
+        default_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(5)
+
         mail.send(msg)
+
+        # Возвращаем таймаут обратно
+        socket.setdefaulttimeout(default_timeout)
         return True
+    except socket.timeout:
+        print(f"Timeout при отправке email на {user_email}")
+        return False
     except Exception as e:
         print(f"Ошибка отправки email: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -235,48 +248,65 @@ def login():
 @app.route('/api/password-reset/request', methods=['POST'])
 def request_password_reset():
     """Запросить восстановление пароля"""
-    data = request.get_json()
+    try:
+        data = request.get_json()
 
-    if 'email' not in data:
-        return jsonify({'error': 'Email обязателен'}), 400
+        if 'email' not in data:
+            return jsonify({'error': 'Email обязателен'}), 400
 
-    user = User.query.filter_by(email=data['email']).first()
+        user = User.query.filter_by(email=data['email']).first()
 
-    if not user:
-        # Не раскрываем, существует ли пользователь (безопасность)
-        return jsonify({'message': 'Если email существует, на него отправлена инструкция'}), 200
+        if not user:
+            # Не раскрываем, существует ли пользователь (безопасность)
+            return jsonify({'message': 'Если email существует, на него отправлена инструкция'}), 200
 
-    # Деактивация старых токенов для этого пользователя
-    old_tokens = PasswordReset.query.filter_by(user_id=user.id, used=False).all()
-    for token in old_tokens:
-        token.used = True
+        # Деактивация старых токенов для этого пользователя
+        old_tokens = PasswordReset.query.filter_by(user_id=user.id, used=False).all()
+        for token in old_tokens:
+            token.used = True
 
-    # Создание нового токена
-    reset_token = PasswordReset.generate_reset_token()
-    password_reset = PasswordReset(
-        user_id=user.id,
-        reset_token=reset_token,
-        expires_at=datetime.utcnow() + timedelta(hours=24)  # Действителен 24 часа
-    )
+        # Создание нового токена
+        reset_token = PasswordReset.generate_reset_token()
+        password_reset = PasswordReset(
+            user_id=user.id,
+            reset_token=reset_token,
+            expires_at=datetime.utcnow() + timedelta(hours=24)  # Действителен 24 часа
+        )
 
-    db.session.add(password_reset)
-    db.session.commit()
+        db.session.add(password_reset)
+        db.session.commit()
 
-    # Отправка email с инструкцией для восстановления
-    email_sent = send_password_reset_email(user.email, reset_token)
+        # Проверяем настроен ли SMTP перед попыткой отправки
+        smtp_configured = bool(app.config.get('MAIL_USERNAME') and app.config.get('MAIL_PASSWORD'))
 
-    if not email_sent:
-        # Если email не отправлен (нет SMTP настроек), возвращаем ссылку в ответе (только для разработки)
-        if not app.config.get('MAIL_USERNAME'):
+        if smtp_configured:
+            # Пытаемся отправить email
+            email_sent = send_password_reset_email(user.email, reset_token)
+
+            if email_sent:
+                return jsonify({
+                    'message': 'Инструкция для восстановления пароля отправлена на email'
+                }), 200
+            else:
+                # Email не отправлен, возвращаем ссылку
+                reset_url = f"{request.host_url.rstrip('/')}/reset-password?token={reset_token}"
+                return jsonify({
+                    'message': 'Не удалось отправить email. Используйте эту ссылку для восстановления пароля',
+                    'reset_url': reset_url
+                }), 200
+        else:
+            # SMTP не настроен - режим разработки
             reset_url = f"{request.host_url.rstrip('/')}/reset-password?token={reset_token}"
             return jsonify({
-                'message': 'Email не настроен. Используйте эту ссылку для восстановления пароля (только для разработки)',
+                'message': 'Email не настроен. Используйте эту ссылку для восстановления пароля',
                 'reset_url': reset_url
             }), 200
 
-    return jsonify({
-        'message': 'Инструкция для восстановления пароля отправлена на email'
-    }), 200
+    except Exception as e:
+        print(f"Ошибка в password-reset/request: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Ошибка сервера: {str(e)}'}), 500
 
 
 @app.route('/api/password-reset/verify/<token>', methods=['GET'])
