@@ -3,6 +3,7 @@
 """
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from flask_cors import CORS
+from flask_mail import Mail, Message
 from datetime import datetime, timedelta
 import jwt
 import os
@@ -20,9 +21,83 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-i
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(BASE_DIR, "affiliate_platform", "database", "affiliate.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Email конфигурация
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@affiliatebridge.com')
+
 # Инициализация расширений
 db.init_app(app)
 CORS(app)
+mail = Mail(app)
+
+# Вспомогательные функции
+def send_password_reset_email(user_email, reset_token):
+    """Отправить email с ссылкой для восстановления пароля"""
+    reset_url = f"{request.host_url.rstrip('/')}/reset-password?token={reset_token}"
+
+    msg = Message(
+        subject='Восстановление пароля - Affiliate Bridge',
+        recipients=[user_email],
+        html=f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">Affiliate Bridge</h1>
+                </div>
+
+                <div style="padding: 30px; background: #f9f9f9;">
+                    <h2 style="color: #333;">Восстановление пароля</h2>
+                    <p style="color: #666; line-height: 1.6;">
+                        Вы запросили восстановление пароля для вашего аккаунта на платформе Affiliate Bridge.
+                    </p>
+                    <p style="color: #666; line-height: 1.6;">
+                        Чтобы установить новый пароль, нажмите на кнопку ниже:
+                    </p>
+
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{reset_url}"
+                           style="display: inline-block; padding: 15px 30px; background: #667eea; color: white;
+                                  text-decoration: none; border-radius: 5px; font-weight: bold;">
+                            Восстановить пароль
+                        </a>
+                    </div>
+
+                    <p style="color: #666; line-height: 1.6;">
+                        Или скопируйте и вставьте эту ссылку в браузер:
+                    </p>
+                    <p style="color: #667eea; word-break: break-all;">
+                        {reset_url}
+                    </p>
+
+                    <p style="color: #999; font-size: 14px; margin-top: 30px;">
+                        Эта ссылка действительна в течение 24 часов.
+                    </p>
+                    <p style="color: #999; font-size: 14px;">
+                        Если вы не запрашивали восстановление пароля, просто проигнорируйте это письмо.
+                    </p>
+                </div>
+
+                <div style="background: #333; padding: 20px; text-align: center;">
+                    <p style="color: #999; margin: 0; font-size: 12px;">
+                        © 2024 Affiliate Bridge. Все права защищены.
+                    </p>
+                </div>
+            </body>
+        </html>
+        """
+    )
+
+    try:
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Ошибка отправки email: {e}")
+        return False
+
 
 # Middleware для аутентификации
 def token_required(f):
@@ -187,16 +262,20 @@ def request_password_reset():
     db.session.add(password_reset)
     db.session.commit()
 
-    # TODO: Отправить email с ссылкой для восстановления
-    # В реальном приложении здесь должна быть отправка email
-    # Для MVP можем просто вернуть токен в ответе (небезопасно для продакшна!)
+    # Отправка email с инструкцией для восстановления
+    email_sent = send_password_reset_email(user.email, reset_token)
 
-    reset_url = f"{request.host_url.rstrip('/')}/reset-password?token={reset_token}"
+    if not email_sent:
+        # Если email не отправлен (нет SMTP настроек), возвращаем ссылку в ответе (только для разработки)
+        if not app.config.get('MAIL_USERNAME'):
+            reset_url = f"{request.host_url.rstrip('/')}/reset-password?token={reset_token}"
+            return jsonify({
+                'message': 'Email не настроен. Используйте эту ссылку для восстановления пароля (только для разработки)',
+                'reset_url': reset_url
+            }), 200
 
-    # В продакшне вместо этого отправлялся бы email
     return jsonify({
-        'message': 'Инструкция для восстановления пароля отправлена на email',
-        'reset_url': reset_url  # Только для MVP! Удалить в продакшне
+        'message': 'Инструкция для восстановления пароля отправлена на email'
     }), 200
 
 
@@ -365,11 +444,16 @@ def create_affiliate_link(current_user):
             'link': existing_link.to_dict(base_url)
         })
 
-    # Создание новой ссылки
+    # Создание новой ссылки с UTM параметрами
     link = AffiliateLink(
         partner_id=current_user.id,
         offer_id=offer.id,
-        tracking_code=AffiliateLink.generate_tracking_code()
+        tracking_code=AffiliateLink.generate_tracking_code(),
+        utm_source=data.get('utm_source'),
+        utm_medium=data.get('utm_medium'),
+        utm_campaign=data.get('utm_campaign'),
+        utm_content=data.get('utm_content'),
+        utm_term=data.get('utm_term')
     )
 
     db.session.add(link)
@@ -401,14 +485,26 @@ def track_click(tracking_code):
     """Отследить клик по партнёрской ссылке"""
     link = AffiliateLink.query.filter_by(tracking_code=tracking_code).first_or_404()
 
-    # Создание записи о клике
+    # Получение UTM параметров из query string
+    utm_source = request.args.get('utm_source')
+    utm_medium = request.args.get('utm_medium')
+    utm_campaign = request.args.get('utm_campaign')
+    utm_content = request.args.get('utm_content')
+    utm_term = request.args.get('utm_term')
+
+    # Создание записи о клике с UTM параметрами
     click = Click(
         affiliate_link_id=link.id,
         partner_id=link.partner_id,
         offer_id=link.offer_id,
         ip_address=request.remote_addr,
         user_agent=request.user_agent.string,
-        referrer=request.referrer
+        referrer=request.referrer,
+        utm_source=utm_source,
+        utm_medium=utm_medium,
+        utm_campaign=utm_campaign,
+        utm_content=utm_content,
+        utm_term=utm_term
     )
 
     db.session.add(click)

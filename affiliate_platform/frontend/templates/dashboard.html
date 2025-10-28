@@ -102,6 +102,86 @@
         </div>
     </div>
 
+    <!-- Модальное окно генератора UTM ссылок -->
+    <div id="utmGeneratorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Генератор UTM меток</h2>
+                <span class="modal-close" onclick="closeUtmGenerator()">&times;</span>
+            </div>
+
+            <div style="background: #f0f4ff; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                <p style="margin: 0; color: #4a5568; font-size: 0.9rem;">
+                    <strong>UTM метки</strong> помогают отслеживать эффективность разных рекламных каналов.
+                    Добавьте метки чтобы понимать, откуда приходят ваши клики.
+                </p>
+            </div>
+
+            <form id="utmGeneratorForm">
+                <div class="form-group">
+                    <label class="form-label">
+                        utm_source *
+                        <span style="font-weight: normal; color: var(--text-secondary);">(Источник трафика)</span>
+                    </label>
+                    <input type="text" class="form-input" id="utm_source" placeholder="instagram, facebook, telegram" required>
+                    <small style="color: var(--text-secondary);">Примеры: instagram, facebook, telegram, youtube</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        utm_medium
+                        <span style="font-weight: normal; color: var(--text-secondary);">(Канал)</span>
+                    </label>
+                    <input type="text" class="form-input" id="utm_medium" placeholder="social, stories, post">
+                    <small style="color: var(--text-secondary);">Примеры: social, cpc, email, stories, post</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        utm_campaign
+                        <span style="font-weight: normal; color: var(--text-secondary);">(Название кампании)</span>
+                    </label>
+                    <input type="text" class="form-input" id="utm_campaign" placeholder="summer_sale_2024">
+                    <small style="color: var(--text-secondary);">Пример: summer_sale_2024, black_friday</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        utm_content
+                        <span style="font-weight: normal; color: var(--text-secondary);">(Вариант объявления)</span>
+                    </label>
+                    <input type="text" class="form-input" id="utm_content" placeholder="banner_top, video_ad">
+                    <small style="color: var(--text-secondary);">Пример: banner_top, video_ad, link_in_bio</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        utm_term
+                        <span style="font-weight: normal; color: var(--text-secondary);">(Ключевое слово)</span>
+                    </label>
+                    <input type="text" class="form-input" id="utm_term" placeholder="купить онлайн">
+                    <small style="color: var(--text-secondary);">Для контекстной рекламы</small>
+                </div>
+
+                <div style="background: #f7fafc; padding: 1rem; border-radius: 0.5rem; margin-top: 1.5rem;">
+                    <label style="font-weight: 500; margin-bottom: 0.5rem; display: block;">Сгенерированная ссылка:</label>
+                    <input type="text" id="generatedUtmUrl" readonly
+                           style="width: 100%; padding: 0.5rem; border-radius: 0.25rem; border: 1px solid var(--border-color); background: white;"
+                           onclick="this.select()">
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-primary" onclick="copyUtmUrl()" style="flex: 1;">
+                        Копировать ссылку
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeUtmGenerator()">
+                        Закрыть
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
         // Проверка авторизации
@@ -220,12 +300,23 @@
                 container.innerHTML = links.map(link => `
                     <div style="border: 1px solid var(--border-color); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
                         <strong>Оффер ID: ${link.offer_id}</strong><br>
-                        <input type="text" value="${link.tracking_url}" readonly
-                               style="width: 100%; margin-top: 0.5rem; padding: 0.5rem; border-radius: 0.25rem; border: 1px solid var(--border-color);"
-                               onclick="this.select()">
-                        <button class="btn btn-primary mt-2" onclick="copyToClipboard('${link.tracking_url}')">
-                            Копировать ссылку
-                        </button>
+                        <small style="color: var(--text-secondary);">Создано: ${new Date(link.created_at).toLocaleDateString('ru-RU')}</small>
+
+                        <div style="margin-top: 1rem;">
+                            <label style="font-weight: 500; margin-bottom: 0.5rem; display: block;">Базовая ссылка:</label>
+                            <input type="text" value="${link.tracking_url}" readonly
+                                   style="width: 100%; padding: 0.5rem; border-radius: 0.25rem; border: 1px solid var(--border-color);"
+                                   onclick="this.select()">
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button class="btn btn-primary" onclick="copyToClipboard('${link.tracking_url}')">
+                                Копировать
+                            </button>
+                            <button class="btn btn-secondary" onclick="openUtmGenerator(${link.id}, '${link.tracking_url}', ${link.offer_id})">
+                                Добавить UTM метки
+                            </button>
+                        </div>
                     </div>
                 `).join('');
             } catch (error) {
@@ -352,6 +443,70 @@
         function formatPrice(price) {
             return new Intl.NumberFormat('ru-RU').format(price);
         }
+
+        // UTM Generator
+        let currentBaseUrl = '';
+
+        function openUtmGenerator(linkId, trackingUrl, offerId) {
+            currentBaseUrl = trackingUrl.split('?')[0]; // Базовая ссылка без параметров
+            document.getElementById('utmGeneratorModal').classList.add('active');
+            updateGeneratedUrl();
+
+            // Обработчики изменения полей
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(fieldId => {
+                document.getElementById(fieldId).addEventListener('input', updateGeneratedUrl);
+            });
+        }
+
+        function closeUtmGenerator() {
+            document.getElementById('utmGeneratorModal').classList.remove('active');
+            // Очистить поля
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(fieldId => {
+                document.getElementById(fieldId).value = '';
+            });
+        }
+
+        function updateGeneratedUrl() {
+            const params = [];
+
+            const source = document.getElementById('utm_source').value.trim();
+            const medium = document.getElementById('utm_medium').value.trim();
+            const campaign = document.getElementById('utm_campaign').value.trim();
+            const content = document.getElementById('utm_content').value.trim();
+            const term = document.getElementById('utm_term').value.trim();
+
+            if (source) params.push(`utm_source=${encodeURIComponent(source)}`);
+            if (medium) params.push(`utm_medium=${encodeURIComponent(medium)}`);
+            if (campaign) params.push(`utm_campaign=${encodeURIComponent(campaign)}`);
+            if (content) params.push(`utm_content=${encodeURIComponent(content)}`);
+            if (term) params.push(`utm_term=${encodeURIComponent(term)}`);
+
+            const generatedUrl = params.length > 0
+                ? `${currentBaseUrl}?${params.join('&')}`
+                : currentBaseUrl;
+
+            document.getElementById('generatedUtmUrl').value = generatedUrl;
+        }
+
+        function copyUtmUrl() {
+            const url = document.getElementById('generatedUtmUrl').value;
+            if (!url || url === currentBaseUrl) {
+                alert('Пожалуйста, заполните хотя бы utm_source');
+                return;
+            }
+
+            navigator.clipboard.writeText(url).then(() => {
+                alert('UTM ссылка скопирована!');
+            });
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.addEventListener('click', (e) => {
+            const utmModal = document.getElementById('utmGeneratorModal');
+            if (e.target === utmModal) {
+                closeUtmGenerator();
+            }
+        });
 
         // Загрузка данных
         loadStats();
