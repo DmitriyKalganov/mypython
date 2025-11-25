@@ -62,3 +62,10 @@ htmlcov/
 node_modules/
 npm-debug.log
 yarn-error.log
+
+# ETL Migration
+etl_migration/logs/
+etl_migration/checkpoints/
+etl_migration/__pycache__/
+*.json
+!etl_migration/__init__.py
