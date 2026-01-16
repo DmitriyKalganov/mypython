@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тестирование чат-виджета</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .content {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-list li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #999;
+            margin-top: 30px;
+            font-size: 14px;
+        }
+
+        .chat-hint {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.02);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Тестовая страница</h1>
+
+        <div class="content">
+            <p>Добро пожаловать на тестовую страницу для проверки чат-виджета!</p>
+        </div>
+
+        <div class="info-box">
+            <h3>Возможности чата:</h3>
+            <ul class="feature-list">
+                <li>Мгновенная связь с поддержкой</li>
+                <li>Удобный интерфейс</li>
+                <li>История сообщений</li>
+                <li>Быстрые ответы</li>
+            </ul>
+        </div>
+
+        <div class="chat-hint">
+            👉 Откройте виджет чата в правом нижнем углу для тестирования
+        </div>
+
+        <div class="footer">
+            <p>Тестовая страница для проверки функциональности чата</p>
+        </div>
+    </div>
+
+    <!-- Chat Widget Script -->
+    <script>
+      (function(d,t) {
+        var BASE_URL="http://213.148.23.213:3000";
+        var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+        g.src=BASE_URL+"/packs/js/sdk.js";
+        g.async = true;
+        s.parentNode.insertBefore(g,s);
+        g.onload=function(){
+          window.chatwootSDK.run({
+            websiteToken: 'h1Gu3SdFbSvi7FmrEZtxX6Qz',
+            baseUrl: BASE_URL
+          })
+        }
+      })(document,"script");
+    </script>
+</body>
+</html>
