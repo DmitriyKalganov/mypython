@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "n8n-ai-agent": {
-      "type": "http",
-      "url": "http://94.154.131.253:5678/mcp/0f8f1758-2c22-46b8-9674-07de7dd0591b"
-    }
-  }
-}
